@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">할 일</string>
+    <string name="hint_new_task">할 일을 입력하세요</string>
+    <string name="add">추가</string>
+    <string name="filter_all">전체</string>
+    <string name="filter_active">진행중</string>
+    <string name="filter_done">완료</string>
+    <string name="clear_done">완료 항목 삭제</string>
+    <string name="empty">할 일이 없습니다</string>
+    <string name="delete">삭제</string>
+    <string name="edit_title">할 일 수정</string>
+    <string name="save">저장</string>
+    <string name="cancel">취소</string>
+    <string name="undo">실행 취소</string>
+    <string name="deleted">삭제했습니다</string>
+    <string name="summary">남은 일 %1$d개 / 전체 %2$d개</string>
+</resources>
