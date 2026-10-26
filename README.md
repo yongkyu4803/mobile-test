@@ -11,3 +11,10 @@ echo "sdk.dir=/path/to/android-sdk" > local.properties
 ./gradlew assembleDebug   # app/build/outputs/apk/debug/app-debug.apk
 ```
 JDK 17+ 필요. 디버그 키로 서명된 APK이므로 개인 사용용입니다. 스토어 배포 시 release 서명 설정이 필요합니다.
+
+## AI 일정관리 (v1.2)
+본인의 Anthropic API 키로 동작합니다 (Claude 구독 로그인과는 별개이며 사용량 과금). 우측 상단 메뉴 → "AI 설정"에서 키를 입력하면 폰 안에만 저장되고 백업·저장소에는 포함되지 않습니다.
+- **AI 버튼**: 입력창에 "내일 오후 3시 법안 검토 회의"처럼 적고 누르면 제목·마감일을 분리해 등록 (여러 건 가능)
+- **AI 오늘 우선순위**: 메뉴에서 실행 → 처리 순서와 이유 제안, "이 순서로 정렬"로 적용
+- **AI로 세분화**: 항목 탭 → 수정창에서 큰 일을 세부 작업(중간 마감 포함)으로 분해
+할 일 제목과 마감일이 Anthropic API로 전송되므로 고객사 기밀 등 민감 정보는 넣지 마세요.

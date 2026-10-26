@@ -7,8 +7,10 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.text.InputType
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -20,6 +22,7 @@ import com.example.todo.databinding.ActivityMainBinding
 import com.example.todo.databinding.DialogEditBinding
 import com.google.android.material.snackbar.Snackbar
 import java.util.Calendar
+import kotlin.concurrent.thread
 
 class MainActivity : AppCompatActivity() {
 
@@ -62,6 +65,7 @@ class MainActivity : AppCompatActivity() {
             renderPendingDue()
         }
         binding.addButton.setOnClickListener { addFromInput() }
+        binding.aiButton.setOnClickListener { aiAddFromInput() }
         binding.input.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
                 addFromInput()
@@ -81,13 +85,22 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.toolbar.setOnMenuItemClickListener {
-            if (it.itemId == R.id.action_clear_done) {
-                tasks.filter { t -> t.done }.forEach { t -> Reminders.cancel(this, t) }
-                tasks.removeAll { t -> t.done }
-                persistAndRender()
-                true
-            } else {
-                false
+            when (it.itemId) {
+                R.id.action_clear_done -> {
+                    tasks.filter { t -> t.done }.forEach { t -> Reminders.cancel(this, t) }
+                    tasks.removeAll { t -> t.done }
+                    persistAndRender()
+                    true
+                }
+                R.id.action_ai_priority -> {
+                    aiPrioritize()
+                    true
+                }
+                R.id.action_ai_settings -> {
+                    showKeyDialog()
+                    true
+                }
+                else -> false
             }
         }
 
@@ -146,7 +159,7 @@ class MainActivity : AppCompatActivity() {
         renderDue()
         dialogBinding.dueButton.setOnClickListener { pickDateTime(due) { due = it; renderDue() } }
         dialogBinding.clearDueButton.setOnClickListener { due = null; renderDue() }
-        AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(this)
             .setTitle(R.string.edit_title)
             .setView(dialogBinding.root)
             .setPositiveButton(R.string.save) { _, _ ->
@@ -155,6 +168,152 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
+        dialogBinding.splitButton.setOnClickListener {
+            val text = input.text.toString().trim()
+            if (text.isEmpty()) return@setOnClickListener
+            dialog.dismiss()
+            aiSplit(task.id, text, due)
+        }
+    }
+
+    // ---- AI 일정관리 ----
+
+    /** 키가 없으면 설정 창을 띄우고, 있으면 백그라운드에서 [work]를 실행한 뒤 UI 스레드에서 [onDone]을 호출한다. */
+    private fun <T> runAi(work: (String) -> T, onDone: (T) -> Unit) {
+        val key = AiSettings(this).apiKey
+        if (key == null) {
+            Toast.makeText(this, R.string.ai_key_needed, Toast.LENGTH_SHORT).show()
+            showKeyDialog()
+            return
+        }
+        val bar = Snackbar.make(binding.root, R.string.ai_working, Snackbar.LENGTH_INDEFINITE)
+        bar.show()
+        binding.aiButton.isEnabled = false
+        thread {
+            val result = try {
+                Result.success(work(key))
+            } catch (e: AiException) {
+                Result.failure(e)
+            } catch (e: Exception) {
+                Result.failure(AiException("예상치 못한 오류: ${e.message}"))
+            }
+            runOnUiThread {
+                bar.dismiss()
+                binding.aiButton.isEnabled = true
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                result.onSuccess(onDone).onFailure {
+                    Snackbar.make(binding.root, it.message ?: "AI 오류", Snackbar.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun showKeyDialog() {
+        val settings = AiSettings(this)
+        val field = EditText(this).apply {
+            hint = getString(R.string.ai_key_hint)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setSingleLine()
+        }
+        val frame = android.widget.FrameLayout(this).apply {
+            val pad = (24 * resources.displayMetrics.density).toInt()
+            setPadding(pad, 8, pad, 0)
+            addView(field)
+        }
+        val builder = AlertDialog.Builder(this)
+            .setTitle(R.string.ai_key_title)
+            .setMessage(R.string.ai_key_message)
+            .setView(frame)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val key = field.text.toString().trim()
+                if (key.isNotEmpty()) settings.apiKey = key
+            }
+            .setNegativeButton(R.string.cancel, null)
+        if (settings.apiKey != null) {
+            builder.setNeutralButton(R.string.remove_key) { _, _ -> settings.apiKey = null }
+        }
+        builder.show()
+    }
+
+    /** 입력창의 자연어 문장을 AI가 할 일(들)로 바꿔 등록한다. */
+    private fun aiAddFromInput() {
+        val text = binding.input.text?.toString()?.trim().orEmpty()
+        if (text.isEmpty()) {
+            Toast.makeText(this, R.string.ai_no_input, Toast.LENGTH_SHORT).show()
+            return
+        }
+        runAi({ key -> AiAssistant.parseTasks(key, text) }) { drafts ->
+            if (drafts.isEmpty()) {
+                Snackbar.make(binding.root, R.string.ai_nothing, Snackbar.LENGTH_LONG).show()
+            } else {
+                binding.input.text?.clear()
+                addDrafts(drafts, 0)
+                binding.list.scrollToPosition(0)
+            }
+        }
+    }
+
+    private fun addDrafts(drafts: List<DraftTask>, at: Int) {
+        val base = System.currentTimeMillis()
+        // 같은 밀리초에 만든 항목끼리 id가 겹치지 않도록 순번을 더한다.
+        val created = drafts.mapIndexed { i, d -> Task(id = base + i, title = d.title, dueAt = d.dueAt) }
+        tasks.addAll(at.coerceIn(0, tasks.size), created)
+        created.forEach { Reminders.sync(this, it) }
+        if (created.any { it.dueAt != null }) requestNotificationPermissionIfNeeded()
+        persistAndRender()
+        Snackbar.make(binding.root, getString(R.string.ai_added, created.size), Snackbar.LENGTH_SHORT).show()
+    }
+
+    private fun aiPrioritize() {
+        val active = tasks.filter { !it.done }
+        if (active.isEmpty()) {
+            Toast.makeText(this, R.string.ai_no_active, Toast.LENGTH_SHORT).show()
+            return
+        }
+        runAi({ key -> AiAssistant.prioritize(key, active) }) { result ->
+            val byId = tasks.associateBy { it.id }
+            val lines = result.items.mapIndexedNotNull { i, item ->
+                byId[item.id]?.let { "${i + 1}. ${it.title}\n    ${item.reason}" }
+            }
+            if (lines.isEmpty()) {
+                Snackbar.make(binding.root, R.string.ai_nothing, Snackbar.LENGTH_LONG).show()
+                return@runAi
+            }
+            AlertDialog.Builder(this)
+                .setTitle(R.string.ai_priority)
+                .setMessage(result.summary + "\n\n" + lines.joinToString("\n\n"))
+                .setPositiveButton(R.string.ai_apply_order) { _, _ ->
+                    val ordered = result.items.mapNotNull { item -> tasks.firstOrNull { it.id == item.id } }
+                    val ids = ordered.map { it.id }.toSet()
+                    tasks = (ordered + tasks.filter { it.id !in ids }).toMutableList()
+                    persistAndRender()
+                    binding.list.scrollToPosition(0)
+                }
+                .setNegativeButton(R.string.close, null)
+                .show()
+        }
+    }
+
+    /** 큰 일을 세부 작업으로 나눈 제안을 보여주고, 확인하면 원래 항목 바로 아래에 추가한다. */
+    private fun aiSplit(taskId: Long, title: String, dueAt: Long?) {
+        runAi({ key -> AiAssistant.decompose(key, title, dueAt) }) { drafts ->
+            if (drafts.isEmpty()) {
+                Snackbar.make(binding.root, R.string.ai_nothing, Snackbar.LENGTH_LONG).show()
+                return@runAi
+            }
+            val preview = drafts.mapIndexed { i, d ->
+                "${i + 1}. ${d.title}" + (d.dueAt?.let { "\n    " + getString(R.string.due_prefix, Reminders.formatDue(it)) } ?: "")
+            }.joinToString("\n\n")
+            AlertDialog.Builder(this)
+                .setTitle(R.string.ai_split_title)
+                .setMessage(preview)
+                .setPositiveButton(R.string.ai_add_all) { _, _ ->
+                    val idx = tasks.indexOfFirst { it.id == taskId }
+                    addDrafts(drafts, if (idx >= 0) idx + 1 else 0)
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
+        }
     }
 
     /** 날짜 → 시간 순서로 고르고, 알림 권한(Android 13+)이 없으면 함께 요청한다. */

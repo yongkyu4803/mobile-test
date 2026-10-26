@@ -19,4 +19,22 @@
     <string name="clear_due">마감일 해제</string>
     <string name="channel_name">마감 알림</string>
     <string name="notif_text">마감 시간이 되었습니다</string>
+    <string name="ai">AI</string>
+    <string name="ai_working">AI가 분석 중입니다…</string>
+    <string name="ai_priority">AI 오늘 우선순위</string>
+    <string name="ai_settings">AI 설정 (API 키)</string>
+    <string name="ai_key_title">Anthropic API 키</string>
+    <string name="ai_key_message">AI 기능은 본인의 API 키로 호출되며, 키는 이 휴대폰에만 저장됩니다. 할 일 제목과 마감일이 Anthropic으로 전송됩니다. 고객사 기밀 등 민감한 내용은 입력하지 마세요.</string>
+    <string name="ai_key_hint">sk-ant-…</string>
+    <string name="ai_key_needed">먼저 AI 설정에서 API 키를 입력하세요</string>
+    <string name="ai_no_input">추가할 내용을 입력창에 먼저 적어주세요</string>
+    <string name="ai_nothing">추가할 할 일을 찾지 못했습니다</string>
+    <string name="ai_no_active">진행 중인 할 일이 없습니다</string>
+    <string name="ai_added">%1$d개 추가했습니다</string>
+    <string name="ai_split">AI로 세분화</string>
+    <string name="ai_split_title">세부 작업 제안</string>
+    <string name="ai_apply_order">이 순서로 정렬</string>
+    <string name="ai_add_all">모두 추가</string>
+    <string name="close">닫기</string>
+    <string name="remove_key">키 삭제</string>
 </resources>

@@ -2,6 +2,14 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:id="@+id/action_ai_priority"
+        android:title="@string/ai_priority"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_ai_settings"
+        android:title="@string/ai_settings"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_clear_done"
         android:title="@string/clear_done"
         app:showAsAction="never" />
