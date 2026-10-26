@@ -14,7 +14,12 @@ class TaskStore(context: Context) {
             val arr = JSONArray(raw)
             MutableList(arr.length()) { i ->
                 val o = arr.getJSONObject(i)
-                Task(o.getLong("id"), o.getString("title"), o.optBoolean("done"))
+                Task(
+                    o.getLong("id"),
+                    o.getString("title"),
+                    o.optBoolean("done"),
+                    if (o.has("due")) o.getLong("due") else null,
+                )
             }
         } catch (e: Exception) {
             mutableListOf()
@@ -24,7 +29,9 @@ class TaskStore(context: Context) {
     fun save(tasks: List<Task>) {
         val arr = JSONArray()
         tasks.forEach {
-            arr.put(JSONObject().put("id", it.id).put("title", it.title).put("done", it.done))
+            val o = JSONObject().put("id", it.id).put("title", it.title).put("done", it.done)
+            it.dueAt?.let { due -> o.put("due", due) }
+            arr.put(o)
         }
         prefs.edit().putString(KEY, arr.toString()).apply()
     }

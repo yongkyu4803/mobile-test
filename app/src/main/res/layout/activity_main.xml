@@ -46,6 +46,30 @@
             android:text="@string/add" />
     </LinearLayout>
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dueButton"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/set_due" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/clearDueButton"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/clear_due"
+            android:visibility="gone" />
+    </LinearLayout>
+
     <com.google.android.material.chip.ChipGroup
         android:id="@+id/filterGroup"
         android:layout_width="match_parent"

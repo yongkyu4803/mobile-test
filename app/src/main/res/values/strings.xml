@@ -14,4 +14,9 @@
     <string name="undo">실행 취소</string>
     <string name="deleted">삭제했습니다</string>
     <string name="summary">남은 일 %1$d개 / 전체 %2$d개</string>
+    <string name="set_due">마감일 설정</string>
+    <string name="due_prefix">마감: %1$s</string>
+    <string name="clear_due">마감일 해제</string>
+    <string name="channel_name">마감 알림</string>
+    <string name="notif_text">마감 시간이 되었습니다</string>
 </resources>

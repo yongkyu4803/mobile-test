@@ -1,7 +1,9 @@
 package com.example.todo
 
+import android.graphics.Color
 import android.graphics.Paint
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -29,6 +31,16 @@ class TaskAdapter(
                 title.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
             }
             title.alpha = if (task.done) 0.5f else 1f
+            val dueAt = task.dueAt
+            if (dueAt == null) {
+                due.visibility = View.GONE
+            } else {
+                due.visibility = View.VISIBLE
+                due.text = root.context.getString(R.string.due_prefix, Reminders.formatDue(dueAt))
+                val overdue = !task.done && dueAt < System.currentTimeMillis()
+                due.setTextColor(if (overdue) Color.parseColor("#D32F2F") else title.currentTextColor)
+                due.alpha = if (overdue) 1f else 0.6f
+            }
             // 리스너를 먼저 해제해야 재바인딩 시 콜백이 중복 호출되지 않는다.
             check.setOnCheckedChangeListener(null)
             check.isChecked = task.done
